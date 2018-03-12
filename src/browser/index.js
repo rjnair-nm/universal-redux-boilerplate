@@ -3,17 +3,19 @@ import { hydrate } from 'react-dom'
 import { Provider } from 'react-redux'
 import configureStore from '../store'
 import App from '../shared/App'
-import { BrowserRouter } from 'react-router-dom'
+import { ConnectedRouter } from 'react-router-redux'
+import createHistory from 'history/createBrowserHistory'
 
+const history = createHistory()
 const preloadedState = window.__INITIAL_STATE__
 delete window.__PRELOADED_STATE__
-const store = configureStore(preloadedState)
+const store = configureStore(preloadedState, history)
 
 hydrate(
   <Provider store={store}>
-    <BrowserRouter>
+    <ConnectedRouter history={history}>
       <App />
-    </BrowserRouter>
+    </ConnectedRouter>
   </Provider>,
   document.getElementById('app')
 )

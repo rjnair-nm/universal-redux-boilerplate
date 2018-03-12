@@ -5,7 +5,7 @@ import { Provider } from 'react-redux'
 import configureStore from '../store'
 import { renderToString } from 'react-dom/server'
 import { StaticRouter, matchPath } from 'react-router-dom'
-import serialize from 'serialize-javascript'
+import AppShell from './appshell'
 import App from '../shared/App'
 import routes from '../shared/routes'
 import api from './api'
@@ -15,40 +15,28 @@ app.use(cors())
 app.use(express.static('public'))
 app.use('/api', api)
 app.get('*', (req, res, next) => {
+  let responseBody = null
   // Create a new Redux store instance
   const initialState = {
     sample: {}
   }
   const store = configureStore(initialState)
+  const markup = renderToString(
+    <Provider store={store}>
+      <StaticRouter location={req.url}>
+        <App />
+      </StaticRouter>
+    </Provider>
+  )
   const activeRoute = routes.find((route) => matchPath(req.url, route)) || {}
   if (activeRoute.component && activeRoute.component.fetchData) {
-    activeRoute.component.fetchData(store).then(data => {
-      const context = { data }
-
-      const markup = renderToString(
-        <Provider store={store}>
-          <StaticRouter location={req.url} context={context}>
-            <App />
-          </StaticRouter>
-        </Provider>
-      )
-
-      res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>SSR with RR</title>
-          <script src="/bundle.js" defer></script>
-          <script>window.__INITIAL_DATA__ = ${serialize(data)}</script>
-          <script>window.__INITIAL_STATE__ = ${serialize(store.getState())}</script>
-        </head>
-
-        <body>
-          <div id="app">${markup}</div>
-        </body>
-      </html>
-    `)
+    activeRoute.component.fetchData(store).then(() => {
+      responseBody = AppShell(store.getState(), markup)
+      res.send(responseBody)
     })
+  } else {
+    responseBody = AppShell(store.getState(), markup)
+    res.send(responseBody)
   }
 })
 
